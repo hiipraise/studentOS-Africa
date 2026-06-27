@@ -1,0 +1,36 @@
+# dependencies
+/node_modules
+
+# Next.js
+/.next/
+/out/
+/build/
+
+
+# Logs
+*.log
+
+# Env files (keep repo clean; never commit secrets)
+.env
+.env.*
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Test coverage
+coverage/
+
+# Editor / IDE
+.idea/
+.vscode/
+
+# Local uploads (project has an upload API; prevent committing user-uploaded content)
+uploads/
+public/uploads/
+

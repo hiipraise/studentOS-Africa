@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── StudentOS Africa — Design Tokens ─────────────────────────────────────── */
+/* Palette:
+   canvas  #F7F8F4  near-white with green cast
+   ink     #111A14  near-black with green undertone
+   forest  #0E5C2F  brand primary
+   gold    #D4980A  accent
+   sage    #E8EDE5  muted section backgrounds
+   muted   #6B7D6E  secondary text
+   border  #D4DAD0  dividers
+*/
+
+@layer base {
+  :root {
+    /* ── shadcn/ui required variables ─────────────────────────────────── */
+    --background:         90 15% 97%;   /* canvas  #F7F8F4 */
+    --foreground:         130 22% 8%;   /* ink     #111A14 */
+
+    --card:               90 15% 97%;
+    --card-foreground:    130 22% 8%;
+
+    --popover:            0 0% 100%;
+    --popover-foreground: 130 22% 8%;
+
+    --primary:            144 73% 21%;  /* forest  #0E5C2F */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:          100 16% 91%;  /* sage    #E8EDE5 */
+    --secondary-foreground: 130 22% 8%;
+
+    --muted:              100 16% 91%;
+    --muted-foreground:   128 8% 45%;   /* muted   #6B7D6E */
+
+    --accent:             43 91% 44%;   /* gold    #D4980A */
+    --accent-foreground:  130 22% 8%;
+
+    --destructive:        0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:             108 10% 83%;  /* border  #D4DAD0 */
+    --input:              108 10% 83%;
+    --ring:               144 73% 21%;  /* forest */
+
+    --radius:             0.625rem;     /* 10px — slightly soft, not pill */
+
+    /* ── StudentOS direct tokens (use in Tailwind as bg-[var(--sos-...)] */
+    --sos-canvas:   #F7F8F4;
+    --sos-ink:      #111A14;
+    --sos-forest:   #0E5C2F;
+    --sos-gold:     #D4980A;
+    --sos-gold-bg:  #FDF5DC;
+    --sos-sage:     #E8EDE5;
+    --sos-muted:    #6B7D6E;
+    --sos-border:   #D4DAD0;
+  }
+
+  /* ── Base resets ───────────────────────────────────────────────────────── */
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  /* ── Headings inherit display font when explicitly set ─────────────────── */
+  .font-display {
+    font-family: var(--font-instrument-serif), Georgia, serif;
+  }
+
+  /* ── Focus ring — forest-colored ───────────────────────────────────────── */
+  :focus-visible {
+    @apply outline-none ring-2 ring-forest ring-offset-2;
+  }
+
+  /* ── Scrollbar (subtle, matches canvas) ────────────────────────────────── */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--sos-sage);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--sos-border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--sos-muted);
+  }
+}
+
+/* ─── Utility classes ────────────────────────────────────────────────────────  */
+@layer components {
+  /* Page wrapper — max-width + horizontal padding */
+  .container-site {
+    @apply mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Section vertical spacing */
+  .section {
+    @apply py-16 md:py-24;
+  }
+
+  /* Section with sage background */
+  .section-muted {
+    @apply py-16 md:py-24 bg-sage;
+  }
+
+  /* Category chip / pill */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border
+           bg-white px-3 py-1 text-xs font-medium text-ink
+           transition-colors hover:bg-sage hover:border-forest/30 cursor-pointer;
+  }
+
+  .chip-active {
+    @apply chip bg-forest text-white border-forest hover:bg-forest/90 hover:border-forest/90;
+  }
+
+  /* Deadline urgency dot */
+  .deadline-dot {
+    @apply inline-block h-2 w-2 rounded-full bg-forest animate-pulse-slow;
+  }
+
+  .deadline-dot-urgent {
+    @apply inline-block h-2 w-2 rounded-full bg-gold animate-pulse-slow;
+  }
+
+  /* Card base */
+  .card-base {
+    @apply rounded-xl border border-border bg-white p-5
+           transition-all duration-200
+           hover:border-forest/30 hover:shadow-sm;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg
+           bg-forest px-5 py-2.5 text-sm font-semibold text-white
+           transition-all duration-150
+           hover:bg-forest-600 active:bg-forest-700
+           focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2;
+  }
+
+  /* Gold/accent button */
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg
+           bg-gold px-5 py-2.5 text-sm font-semibold text-ink
+           transition-all duration-150
+           hover:bg-gold-dark hover:text-white active:bg-gold-dark
+           focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg
+           px-4 py-2 text-sm font-medium text-ink
+           transition-colors duration-150
+           hover:bg-sage hover:text-forest;
+  }
+}
