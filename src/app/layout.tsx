@@ -1,29 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
-// ─── Fonts ────────────────────────────────────────────────────────────────────
-
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-plus-jakarta",
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  variable: "--font-instrument-serif",
-  display: "swap",
-  weight: "400",
-  style: ["normal", "italic"],
-});
-
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export const metadata: Metadata = {
+  icons: { icon: "/icon.svg", shortcut: "/favicon.ico", apple: "/apple-touch-icon.png" },
+  manifest: "/manifest.webmanifest",
   title: {
     default: "StudentOS Africa — Scholarships, Internships & Student Benefits",
     template: "%s | StudentOS Africa",
@@ -46,7 +30,7 @@ export const metadata: Metadata = {
   ),
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "en_NG",
     url: "/",
     siteName: "StudentOS Africa",
     title: "StudentOS Africa — Discover Opportunities",
@@ -88,11 +72,10 @@ export default function RootLayout({
 }) {
   return (
     <html
-      lang="en"
-      className={`${plusJakarta.variable} ${instrumentSerif.variable}`}
-      suppressHydrationWarning
+      lang="en-NG"
+      className="font-sans"
     >
-      <body className="min-h-screen flex flex-col bg-canvas text-ink antialiased" suppressHydrationWarning>
+      <body className="min-h-screen flex flex-col bg-canvas text-ink antialiased">
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

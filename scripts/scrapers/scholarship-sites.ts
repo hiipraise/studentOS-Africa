@@ -183,7 +183,7 @@ function normalize(raw: RawScrapedItem): CreateOpportunityInput | null {
   };
 }
 
-export const scholarshipSitesPipeline: PipelineConfig<unknown, CreateOpportunityInput> = {
+export const scholarshipSitesPipeline: PipelineConfig<CreateOpportunityInput> = {
   source: "scholarship-sites",
   collectionName: "opportunities",
   extract,

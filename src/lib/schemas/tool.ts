@@ -17,6 +17,8 @@ export const ToolSchema = z.object({
   officialLink: z.string().url(),
   image: z.string().url().optional(),
   free: z.boolean().default(true),
+  freeTier: z.string().max(300).optional(),
+  studentOffer: z.boolean().optional(),
   featured: z.boolean().default(false),
   published: z.boolean().default(false),
 });

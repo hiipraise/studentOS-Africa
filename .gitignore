@@ -11,8 +11,7 @@
 *.log
 
 # Env files (keep repo clean; never commit secrets)
-.env
-.env.*
+.env.local
 
 # misc
 .DS_Store

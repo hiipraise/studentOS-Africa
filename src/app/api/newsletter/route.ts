@@ -3,10 +3,13 @@ import { getDb, Collections } from "@/lib/db";
 import { SubscribeSchema } from "@/lib/schemas/newsletter";
 import { sendTransactionalEmail, welcomeEmailHtml, addToSendhiivAudience } from "@/lib/sendhiiv";
 import type { NewsletterSubscriber, ApiResponse } from "@/types";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 // ─── POST /api/newsletter ──────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const limit = await enforceRateLimit(req, "newsletter", 5, 60 * 60_000);
+  if (!limit.allowed) return NextResponse.json<ApiResponse<never>>({ success: false, error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(limit.retryAfter) } });
   try {
     const body = await req.json();
     const parsed = SubscribeSchema.safeParse(body);

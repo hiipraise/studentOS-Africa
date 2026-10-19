@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { truncate } from "@/lib/utils";
 import type { Benefit } from "@/types";
+import { TrustMetadata } from "@/components/shared/TrustMetadata";
 
 interface BenefitCardProps {
   benefit: Benefit;
@@ -12,10 +13,7 @@ export function BenefitCard({ benefit }: BenefitCardProps) {
   const { title, slug, description, eligibility, image } = benefit;
 
   return (
-    <Link
-      href={`/benefits/${slug}`}
-      className="group card-base flex flex-col gap-3 no-underline"
-    >
+    <article className="group card-base flex flex-col gap-3">
       {/* Logo/Image */}
       <div className="flex items-center gap-3">
         {image ? (
@@ -36,7 +34,7 @@ export function BenefitCard({ benefit }: BenefitCardProps) {
           </div>
         )}
         <h3 className="font-semibold text-ink text-[15px] leading-snug group-hover:text-forest transition-colors line-clamp-1">
-          {title}
+          <Link href={`/benefits/${slug}`} className="no-underline">{title}</Link>
         </h3>
       </div>
 
@@ -55,6 +53,7 @@ export function BenefitCard({ benefit }: BenefitCardProps) {
           aria-hidden="true"
         />
       </div>
-    </Link>
+      <TrustMetadata slug={slug} verifiedAt={benefit.lastChecked} verifiedBy={benefit.verifiedBy} sourceUrl={benefit.officialLink} confidence={benefit.confidence} staleAt={benefit.lastChecked} />
+    </article>
   );
 }

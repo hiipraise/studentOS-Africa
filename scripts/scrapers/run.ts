@@ -27,8 +27,9 @@ import { scholarshipSitesPipeline } from "./scholarship-sites";
 import { aiToolDirectoriesPipeline } from "./ai-tool-directories";
 import { studentOffersPipeline } from "./student-offers";
 
+// The registry intentionally stores pipelines with different validated item shapes.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyPipeline = PipelineConfig<unknown, any>;
+type AnyPipeline = PipelineConfig<any>;
 
 const PIPELINES: Record<string, AnyPipeline> = {
   "github-pack": githubStudentPackPipeline,

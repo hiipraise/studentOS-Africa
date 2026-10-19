@@ -1,11 +1,9 @@
 import { v2 as cloudinary } from "cloudinary";
-
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+import { getEnv } from "@/lib/env";
+function configureCloudinary() {
+  const env = getEnv();
+  cloudinary.config({ cloud_name: env.CLOUDINARY_CLOUD_NAME, api_key: env.CLOUDINARY_API_KEY, api_secret: env.CLOUDINARY_API_SECRET, secure: true });
+}
 
 export interface UploadResult {
   url: string;
@@ -22,6 +20,7 @@ export function uploadToCloudinary(
   buffer: Buffer,
   folder = "studentos"
 ): Promise<UploadResult> {
+  configureCloudinary();
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {

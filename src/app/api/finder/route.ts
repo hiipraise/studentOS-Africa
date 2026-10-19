@@ -10,13 +10,21 @@ import type {
   FinderResult,
   ApiResponse,
 } from "@/types";
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { mapCountryText, regionsForCountry } from "@/lib/domain/countries";
 
 // ─── POST /api/finder ─────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.GROQ_API_KEY) return NextResponse.json<ApiResponse<never>>({ success: false, error: "AI is unavailable right now. Please try again later." }, { status: 503 });
+    const minute = await enforceRateLimit(req, "finder", 5, 60_000);
+    const day = await enforceRateLimit(req, "finder", 30, 86_400_000, "daily");
+    if (!minute.allowed || !day.allowed) {
+      const retryAfter = Math.max(minute.allowed ? 0 : minute.retryAfter, day.allowed ? 0 : day.retryAfter);
+      return NextResponse.json({ success: false, error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(retryAfter) } });
+    }
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const body = await req.json();
     const parsed = FinderInputSchema.safeParse(body);
 
@@ -28,6 +36,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { country, course, level, interests, careerGoal } = parsed.data;
+    const countryMapping = mapCountryText(country);
+    const eligibleCountryCodes = countryMapping?.codes.length ? countryMapping.codes : /^[A-Za-z]{2}$/.test(country) ? [country.toUpperCase()] : [];
+    const eligibilityMatch = eligibleCountryCodes.length ? { $or: [
+      { countries: { $in: [country, ...eligibleCountryCodes] } },
+      { "eligibility.countries": { $in: eligibleCountryCodes } },
+      { "eligibility.regions": { $in: [...new Set(eligibleCountryCodes.flatMap(regionsForCountry)), "GLOBAL"] } },
+    ] } : { countries: country };
+    const now = new Date();
 
     // ── 1. Pull candidate data from DB ──────────────────────────────────
     const db = await getDb();
@@ -35,7 +51,11 @@ export async function POST(req: NextRequest) {
     const [opportunities, benefits, tools, guides] = await Promise.all([
       db
         .collection<Opportunity>(Collections.opportunities)
-        .find({ published: true })
+        .find({ published: true, status: { $ne: "closed" }, $and: [
+          eligibilityMatch,
+          { $or: [{ "cycle.closesAt": { $gte: now } }, { "cycle.closesAt": { $exists: false }, deadline: { $gte: now } }, { "cycle.closesAt": { $exists: false }, deadline: null }, { status: "rolling" }, { status: "upcoming", "cycle.opensAt": { $gt: now } }] },
+          { $or: [{ "eligibility.levels": level }, { "eligibility.levels": { $exists: false } }, { "eligibility.levels": { $size: 0 } }] },
+        ] })
         .project({
           title: 1,
           slug: 1,
@@ -44,6 +64,9 @@ export async function POST(req: NextRequest) {
           countries: 1,
           deadline: 1,
           requirements: 1,
+          eligibility: 1,
+          cycle: 1,
+          status: 1,
         })
         .limit(100)
         .toArray(),

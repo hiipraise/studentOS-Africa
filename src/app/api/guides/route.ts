@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, Collections } from "@/lib/db";
+import { requireAdminApi } from "@/lib/api-auth";
+import { CreateGuideSchema } from "@/lib/schemas/guide";
 import type { Guide, ApiResponse } from "@/types";
+import { parsePage, parsePageSize } from "@/lib/safe-query";
 
 // ─── GET /api/guides ──────────────────────────────────────────────────────
 // Query params: ?tag=scholarship  ?featured=true  ?page=1  ?pageSize=10
@@ -10,11 +13,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
     const tag = searchParams.get("tag");
     const featured = searchParams.get("featured");
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const pageSize = Math.min(
-      50,
-      Math.max(1, parseInt(searchParams.get("pageSize") ?? "10", 10))
-    );
+    const page = parsePage(searchParams.get("page"));
+    const pageSize = parsePageSize(searchParams.get("pageSize"), 10);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: Record<string, any> = { published: true };
@@ -55,6 +55,48 @@ export async function GET(req: NextRequest) {
     console.error("[GET /api/guides]", err);
     return NextResponse.json<ApiResponse<never>>(
       { success: false, error: "Failed to fetch guides" },
+      { status: 500 }
+    );
+  }
+}
+
+// ─── POST /api/guides (Admin only) ────────────────────────────────────────
+
+export async function POST(req: NextRequest) {
+  const { errorResponse } = await requireAdminApi();
+  if (errorResponse) return errorResponse;
+
+  try {
+    const body = await req.json();
+    const parsed = CreateGuideSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json<ApiResponse<never>>(
+        { success: false, error: parsed.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const now = new Date();
+    const doc: Guide = {
+      ...parsed.data,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const db = await getDb();
+    const result = await db
+      .collection<Guide>(Collections.guides)
+      .insertOne(doc);
+
+    return NextResponse.json<ApiResponse<{ id: string }>>(
+      { success: true, data: { id: result.insertedId.toString() } },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error("[POST /api/guides]", err);
+    return NextResponse.json<ApiResponse<never>>(
+      { success: false, error: "Failed to create guide" },
       { status: 500 }
     );
   }

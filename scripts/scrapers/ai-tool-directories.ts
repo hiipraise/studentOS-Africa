@@ -159,7 +159,7 @@ function normalize(raw: RawScrapedItem): CreateToolInput | null {
   };
 }
 
-export const aiToolDirectoriesPipeline: PipelineConfig<unknown, CreateToolInput> = {
+export const aiToolDirectoriesPipeline: PipelineConfig<CreateToolInput> = {
   source: "ai-tool-directories",
   collectionName: "tools",
   extract,

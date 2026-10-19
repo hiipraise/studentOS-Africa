@@ -5,6 +5,9 @@ import { OpportunityFilters } from "@/components/opportunities/OpportunityFilter
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { getOpportunities } from "@/lib/data/opportunities";
+import { parsePage } from "@/lib/safe-query";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Opportunities",
@@ -18,12 +21,13 @@ interface PageProps {
     country?: string;
     q?: string;
     page?: string;
+    showClosed?: string;
   }>;
 }
 
 export default async function OpportunitiesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const page = parsePage(params.page ?? null);
   const pageSize = 12;
 
   const { items, total } = await getOpportunities({
@@ -32,6 +36,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
     q: params.q,
     page,
     pageSize,
+    showClosed: params.showClosed === "true",
   });
 
   return (
@@ -56,6 +61,13 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
 
         {/* Results */}
         <div>
+          <form className="mb-4 flex items-center gap-2 text-sm text-muted">
+            {params.category && <input type="hidden" name="category" value={params.category} />}
+            {params.country && <input type="hidden" name="country" value={params.country} />}
+            {params.q && <input type="hidden" name="q" value={params.q} />}
+            <input type="checkbox" name="showClosed" value="true" defaultChecked={params.showClosed === "true"} onChange={(event) => event.currentTarget.form?.requestSubmit()} />
+            <label>Show closed opportunities</label>
+          </form>
           <p className="text-sm text-muted mb-4">
             {total} {total === 1 ? "opportunity" : "opportunities"} found
           </p>

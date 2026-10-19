@@ -5,6 +5,12 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, CheckCircle2, Globe, Gift } from "lucide-react";
 import { DeadlineBadge } from "@/components/shared/DeadlineBadge";
 import { getOpportunityBySlug } from "@/lib/data/opportunities";
+import { getOpportunityStatus, reopenLabel } from "@/lib/domain/status";
+import { TrustMetadata } from "@/components/shared/TrustMetadata";
+import { DeadlineTimezoneDisplay } from "@/components/opportunities/DeadlineTimezoneDisplay";
+import { getOpportunities } from "@/lib/data/opportunities";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -38,6 +44,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     deadline, requirements, benefits,
     applicationSteps, officialLink, image,
   } = opportunity;
+  const status = getOpportunityStatus(opportunity);
+  const alternatives = status === "closed" ? await getOpportunities({ category, pageSize: 3 }) : null;
 
   return (
     <div className="container-site py-10 md:py-14">
@@ -69,6 +77,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               {title}
             </h1>
             <p className="text-muted leading-relaxed text-[15px]">{description}</p>
+            <TrustMetadata slug={slug} verifiedAt={opportunity.verifiedAt} verifiedBy={opportunity.verifiedBy} sourceUrl={opportunity.source?.url ?? officialLink} confidence={opportunity.confidence} staleAt={opportunity.verifiedAt} />
           </div>
 
           {/* Requirements */}
@@ -139,7 +148,8 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <a
+            {deadline && <DeadlineTimezoneDisplay deadline={deadline} timezone={opportunity.timezone || "UTC"} note={opportunity.deadlineNote} />}
+            {status === "closed" ? <div className="rounded-lg bg-sage p-3 text-sm text-ink"><p className="font-semibold">Applications are closed.</p><p>{reopenLabel(opportunity.cycle) ?? "Check the official source for the next cycle."}</p></div> : status === "upcoming" ? <p className="rounded-lg bg-sage p-3 text-sm text-ink">Applications have not opened yet.</p> : status === "open" || status === "rolling" ? <a
               href={officialLink}
               target="_blank"
               rel="noopener noreferrer"
@@ -147,12 +157,13 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
             >
               Apply Now
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            </a>
+            </a> : <a href={officialLink} target="_blank" rel="noopener noreferrer" className="btn-ghost justify-center mt-2">Check official status<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" /></a>}
 
             <p className="text-xs text-muted text-center leading-relaxed">
               You&apos;ll be redirected to the official application page.
             </p>
           </div>
+          {alternatives && <section className="mt-5"><h2 className="text-sm font-semibold mb-2">Similar open opportunities</h2>{alternatives.items.filter((item) => item.slug !== slug).map((item) => <Link key={item.slug} className="block text-sm text-forest underline py-1" href={`/opportunities/${item.slug}`}>{item.title}</Link>)}</section>}
         </aside>
       </div>
     </div>

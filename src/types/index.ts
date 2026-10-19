@@ -25,6 +25,18 @@ export interface Opportunity {
   countries: string[];
   /** null means rolling / no fixed deadline */
   deadline: Date | null;
+  eligibility?: OpportunityEligibility;
+  funding?: { type: "full" | "partial" | "stipend" | "none" | "unknown"; amountText?: string; currency?: string };
+  status?: OpportunityStatus;
+  cycle?: OpportunityCycle;
+  deadlineNote?: string;
+  timezone?: string;
+  source?: { type: "official" | "aggregator" | "community" | "admin"; url?: string };
+  verifiedAt?: Date;
+  verifiedBy?: string;
+  confidence?: "high" | "medium" | "low";
+  lastLinkCheck?: { at: Date; status: string; httpCode?: number };
+  needsReview?: boolean;
   requirements: string[];
   /** What the recipient gets */
   benefits: string[];
@@ -38,6 +50,25 @@ export interface Opportunity {
   updatedAt: Date;
 }
 
+export type OpportunityStatus = "open" | "upcoming" | "closed" | "rolling" | "unknown";
+export interface OpportunityCycle {
+  year?: number;
+  opensAt?: Date;
+  closesAt?: Date | null;
+  recurrence?: "annual" | "biannual" | "rolling" | "one-off";
+  nextExpectedWindow?: string;
+}
+export interface OpportunityEligibility {
+  countries: string[];
+  regions: string[];
+  levels: ("highschool" | "undergraduate" | "postgraduate" | "phd" | "professional")[];
+  fields: string[];
+  genders?: string[];
+  ageMin?: number;
+  ageMax?: number;
+  notes?: string;
+}
+
 // ─── Benefit ───────────────────────────────────────────────────────────────
 
 export interface Benefit {
@@ -46,6 +77,13 @@ export interface Benefit {
   slug: string;
   description: string;
   eligibility: string;
+  availability?: { countries: Record<string, "works" | "partial" | "blocked" | "unknown">; notes?: string };
+  verificationMethod?: string;
+  paymentNotes?: string;
+  lastChecked?: Date;
+  needsReview?: boolean;
+  verifiedBy?: string;
+  confidence?: "high" | "medium" | "low";
   requirements: string[];
   officialLink: string;
   /** Link to the StudentOS guide for claiming this benefit */
@@ -78,6 +116,8 @@ export interface Tool {
   /** Cloudinary URL */
   image?: string;
   free: boolean;
+  freeTier?: string;
+  studentOffer?: boolean;
   featured: boolean;
   published: boolean;
   createdAt: Date;
@@ -132,16 +172,6 @@ export interface NewsletterSubscriber {
   email: string;
   /** Sendhiiv subscriber ID after successful sync */
   sendhiivId?: string;
-  createdAt: Date;
-}
-
-// ─── Admin ─────────────────────────────────────────────────────────────────
-
-export interface Admin {
-  _id?: ObjectId;
-  email: string;
-  /** bcrypt hash — never expose raw */
-  passwordHash: string;
   createdAt: Date;
 }
 

@@ -1,0 +1,49 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run import:opportunities -- --file=docs/opportunity-import-template.csv
+      - run: npm run ensure-indexes
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/studentos
+          MONGODB_DB: studentos
+      - run: npm run migrate:opportunities-v2 -- --dry-run
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/studentos
+          MONGODB_DB: studentos
+      - run: npm run build
+        env:
+          AUTH_SECRET: ci-only-test-secret-with-enough-entropy
+          AUTH_GOOGLE_ID: ci-placeholder
+          AUTH_GOOGLE_SECRET: ci-placeholder
+          ADMIN_EMAILS: admin@example.com
+          MONGODB_DB: studentos
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/studentos
+          MONGODB_DB: studentos

@@ -137,7 +137,7 @@ async function extract(): Promise<RawScrapedItem[]> {
 }
 
 function normalize(raw: RawScrapedItem): CreateBenefitInput | null {
-  const { title, description, href, tags, partners, category, sourceUrl, slug: existingSlug } = raw.raw;
+  const { title, description, href, tags, partners, sourceUrl, slug: existingSlug } = raw.raw;
   if (!title) return null;
 
   const slug = existingSlug || String(title)
@@ -169,7 +169,7 @@ function normalize(raw: RawScrapedItem): CreateBenefitInput | null {
   };
 }
 
-export const githubStudentPackPipeline: PipelineConfig<unknown, CreateBenefitInput> = {
+export const githubStudentPackPipeline: PipelineConfig<CreateBenefitInput> = {
   source: "github-student-pack",
   collectionName: "benefits",
   extract,

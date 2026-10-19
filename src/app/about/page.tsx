@@ -25,11 +25,12 @@ export default function AboutPage() {
           <p>
             We built a single home for everything a student needs to discover — scholarships,
             internships, fellowships, grants, competitions, hackathons, student benefits, and
-            free tools — all curated, all verified, all in one place.
+            free tools — collected in one place to make discovery easier. Listing details and
+            availability can change, so confirm current requirements with the official provider.
           </p>
           <p>
-            Every benefit listed includes real reports from real students who tried claiming
-            it, so you know what actually works before you spend your time on it.
+            Student reports are shown when available. They reflect individual experiences and
+            may not match every student&apos;s situation.
           </p>
         </div>
 

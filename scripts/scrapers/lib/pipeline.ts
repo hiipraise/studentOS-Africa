@@ -12,7 +12,7 @@ import type { ZodType, ZodTypeDef } from "zod";
 import type { Db } from "mongodb";
 import type { RawScrapedItem, PipelineStats, PipelineOptions } from "./types";
 
-export interface PipelineConfig<TRaw, TNormalized> {
+export interface PipelineConfig<TNormalized> {
   source: string;
   collectionName: string;
   /** Fetches raw items from the target site */
@@ -24,15 +24,15 @@ export interface PipelineConfig<TRaw, TNormalized> {
    * than their output type (optional-with-default in, required out) —
    * ZodSchema<T> assumes input === output === T, which doesn't match.
    */
-  schema: ZodType<TNormalized, ZodTypeDef, any>;
+  schema: ZodType<TNormalized, ZodTypeDef, unknown>;
   /** Converts a raw scraped item into the shape your schema expects */
   normalize: (raw: RawScrapedItem) => TNormalized | null;
   /** Field to upsert on, so re-running doesn't create duplicates */
   upsertKey: (item: TNormalized) => Record<string, unknown>;
 }
 
-export async function runPipeline<TRaw, TNormalized>(
-  config: PipelineConfig<TRaw, TNormalized>,
+export async function runPipeline<TNormalized>(
+  config: PipelineConfig<TNormalized>,
   db: Db | null,
   options: PipelineOptions
 ): Promise<PipelineStats> {

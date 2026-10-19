@@ -6,6 +6,8 @@ import { ArrowLeft, Clock } from "lucide-react";
 import { GuideContent } from "@/components/guides/GuideContent";
 import { getGuideBySlug } from "@/lib/data/guides";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }

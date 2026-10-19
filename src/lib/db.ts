@@ -1,47 +1,18 @@
-import { MongoClient, Db } from "mongodb";
+import { MongoClient, type Db } from "mongodb";
+import { getEnv } from "@/lib/env";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  throw new Error(
-    "Missing env: MONGODB_URI. Add it to .env.local before running.",
-  );
-}
-
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
-
-// Global cache prevents creating a new connection on every hot-reload in dev
-declare global {
-  var _mongoClientPromise: Promise<MongoClient> | undefined;
-}
-
-if (process.env.NODE_ENV === "development") {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(MONGODB_URI);
-    global._mongoClientPromise = client.connect();
-  }
-  clientPromise = global._mongoClientPromise;
-} else {
-  client = new MongoClient(MONGODB_URI);
-  clientPromise = client.connect();
-}
-
-export default clientPromise;
-
-/** Returns the studentos database instance */
+declare global { var _mongoClientPromise: Promise<MongoClient> | undefined; }
+let clientPromise: Promise<MongoClient> | undefined;
 export async function getDb(): Promise<Db> {
-  const c = await clientPromise;
-  return c.db("studentos");
+  const env = getEnv();
+  if (!env.MONGODB_URI) throw new Error("Database is unavailable. Configure MONGODB_URI.");
+  clientPromise ??= globalThis._mongoClientPromise ?? new MongoClient(env.MONGODB_URI).connect();
+  if (process.env.NODE_ENV !== "production") globalThis._mongoClientPromise = clientPromise;
+  return (await clientPromise).db(env.MONGODB_DB);
 }
-
-/** Typed collection accessor — keeps collection names in one place */
-export const Collections = {
-  opportunities: "opportunities",
-  benefits: "benefits",
-  tools: "tools",
-  guides: "guides",
-  reports: "reports",
-  newsletter: "newsletter",
-  admins: "admins",
-} as const;
+export async function closeDb() {
+  if (clientPromise) await (await clientPromise).close();
+  clientPromise = undefined;
+  globalThis._mongoClientPromise = undefined;
+}
+export const Collections = { opportunities: "opportunities", benefits: "benefits", tools: "tools", guides: "guides", reports: "reports", newsletter: "newsletter", rateLimits: "rate_limits", needsAttention: "needs_attention", reviewQueue: "review_queue", auditLog: "audit_log" } as const;

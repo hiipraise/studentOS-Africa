@@ -4,6 +4,8 @@ import { CommunityReportsList } from "@/components/reports/CommunityReportsList"
 import { getDb, Collections } from "@/lib/db";
 import type { Report } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Community Reports",
   description: "Real experiences from students who claimed scholarships, internships, and benefits.",

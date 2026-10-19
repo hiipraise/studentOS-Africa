@@ -31,23 +31,17 @@ import type { PipelineConfig } from "./lib/pipeline";
 // ── No server-rendered sources currently available ───────────────────────
 // Most student discount platforms are client-rendered SPAs.
 // When a Playwright-based extractor is added, list sources below.
-const SOURCES: {
-  name: string;
-  url: string;
-  baseUrl: string;
-}[] = [];
-
 async function extract(): Promise<RawScrapedItem[]> {
   // No server-rendered sources available yet.
   // See the file header for how to add headless-browser sources.
   return [];
 }
 
-function normalize(_raw: RawScrapedItem): CreateBenefitInput | null {
+function normalize(): CreateBenefitInput | null {
   return null;
 }
 
-export const studentOffersPipeline: PipelineConfig<unknown, CreateBenefitInput> = {
+export const studentOffersPipeline: PipelineConfig<CreateBenefitInput> = {
   source: "student-offers",
   collectionName: "benefits",
   extract,

@@ -52,12 +52,14 @@ export function ToolCard({ tool }: ToolCardProps) {
             Free
           </span>
         )}
+        {tool.studentOffer && <span className="shrink-0 rounded-full bg-gold/10 px-2 py-0.5 text-xs font-medium text-ink border border-gold/30">Student offer</span>}
       </div>
 
       {/* Description */}
       <p className="text-sm text-muted leading-relaxed line-clamp-2 flex-1">
         {truncate(description, 100)}
       </p>
+      {tool.freeTier && <p className="text-xs text-muted line-clamp-2">Free tier: {tool.freeTier}</p>}
 
       {/* Actions */}
       <div className="flex items-center gap-2 mt-auto pt-1">

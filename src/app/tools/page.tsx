@@ -5,6 +5,9 @@ import { ToolFilters } from "@/components/tools/ToolFilters";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { getTools } from "@/lib/data/tools";
+import { parsePage } from "@/lib/safe-query";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Free Student Tools",
@@ -17,7 +20,7 @@ interface PageProps {
 
 export default async function ToolsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const page = parsePage(params.page ?? null);
   const pageSize = 12;
 
   const { items, total } = await getTools({

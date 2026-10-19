@@ -4,6 +4,9 @@ import { GuideCard } from "@/components/guides/GuideCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { getGuides } from "@/lib/data/guides";
+import { parsePage } from "@/lib/safe-query";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Guides",
@@ -16,7 +19,7 @@ interface PageProps {
 
 export default async function GuidesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const page = parsePage(params.page ?? null);
   const pageSize = 10;
 
   const { items, total } = await getGuides({ tag: params.tag, page, pageSize });

@@ -4,6 +4,9 @@ import { BenefitCard } from "@/components/benefits/BenefitCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { getBenefits } from "@/lib/data/benefits";
+import { parsePage } from "@/lib/safe-query";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Student Benefits",
@@ -17,7 +20,7 @@ interface PageProps {
 
 export default async function BenefitsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const page = parsePage(params.page ?? null);
   const pageSize = 12;
 
   const { items, total } = await getBenefits({ page, pageSize });

@@ -5,6 +5,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, CheckCircle2, BookOpen } from "lucide-react";
 import { CommunityReportsList } from "@/components/reports/CommunityReportsList";
 import { getBenefitBySlug } from "@/lib/data/benefits";
+import { TrustMetadata } from "@/components/shared/TrustMetadata";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -62,6 +65,10 @@ export default async function BenefitDetailPage({ params }: PageProps) {
           </div>
 
           <p className="text-ink/80 leading-relaxed text-[15px]">{description}</p>
+          <TrustMetadata slug={slug} verifiedAt={benefit.lastChecked} verifiedBy={benefit.verifiedBy} sourceUrl={officialLink} confidence={benefit.confidence} staleAt={benefit.lastChecked} />
+          {benefit.availability && <section><h2 className="font-semibold">Availability by country</h2><p className="text-sm text-muted">{Object.entries(benefit.availability.countries).map(([code, state]) => `${code}: ${state}`).join(" · ") || "Country availability has not been verified."}</p>{benefit.availability.notes && <p className="text-sm text-muted">{benefit.availability.notes}</p>}</section>}
+          {benefit.verificationMethod && <p className="text-sm text-muted">Verification method: {benefit.verificationMethod}</p>}
+          {benefit.paymentNotes && <p className="text-sm text-muted">Payment notes: {benefit.paymentNotes}</p>}
 
           {/* Requirements */}
           {requirements.length > 0 && (

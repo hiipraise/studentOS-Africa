@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, Collections } from "@/lib/db";
 import { CreateBenefitSchema } from "@/lib/schemas/benefit";
+import { requireAdminApi } from "@/lib/api-auth";
 import type { Benefit, ApiResponse } from "@/types";
+import { parsePage, parsePageSize } from "@/lib/safe-query";
 
 // ─── GET /api/benefits ────────────────────────────────────────────────────
 // Query params: ?featured=true  ?page=1  ?pageSize=12
@@ -10,11 +12,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
     const featured = searchParams.get("featured");
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const pageSize = Math.min(
-      50,
-      Math.max(1, parseInt(searchParams.get("pageSize") ?? "12", 10))
-    );
+    const page = parsePage(searchParams.get("page"));
+    const pageSize = parsePageSize(searchParams.get("pageSize"));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: Record<string, any> = { published: true };
@@ -50,6 +49,9 @@ export async function GET(req: NextRequest) {
 // ─── POST /api/benefits (Admin only) ─────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const { errorResponse } = await requireAdminApi();
+  if (errorResponse) return errorResponse;
+
   try {
     const body = await req.json();
     const parsed = CreateBenefitSchema.safeParse(body);

@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getToolBySlug } from "@/lib/data/tools";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -27,7 +29,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
 
   if (!tool) notFound();
 
-  const { title, description, category, officialLink, image, free } = tool;
+  const { title, description, category, officialLink, image, free, freeTier, studentOffer } = tool;
 
   return (
     <div className="container-site py-10 md:py-14">
@@ -62,11 +64,13 @@ export default async function ToolDetailPage({ params }: PageProps) {
                     Free
                   </span>
                 )}
+                {studentOffer && <span className="rounded-full bg-gold/10 px-2.5 py-0.5 text-xs font-medium text-ink border border-gold/30">Student offer</span>}
               </div>
             </div>
           </div>
 
           <p className="text-ink/80 leading-relaxed text-[15px]">{description}</p>
+          {freeTier && <p className="text-sm text-muted"><span className="font-medium text-ink">Free tier:</span> {freeTier}</p>}
 
           <a href={officialLink} target="_blank" rel="noopener noreferrer" className="btn-primary justify-center">
             Open {title}

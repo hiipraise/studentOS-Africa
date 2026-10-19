@@ -82,8 +82,8 @@ const config: Config = {
 
       // ── Typography ───────────────────────────────────────────────────────
       fontFamily: {
-        display: ["var(--font-instrument-serif)", "Georgia", "serif"],
-        sans:    ["var(--font-plus-jakarta)", "system-ui", "sans-serif"],
+        display: ["Georgia", "serif"],
+        sans:    ["Arial", "system-ui", "sans-serif"],
       },
       fontSize: {
         // Display scale (used sparingly in heroes/headings)

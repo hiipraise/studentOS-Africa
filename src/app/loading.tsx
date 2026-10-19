@@ -1,0 +1,1 @@
+export default function Loading() { return <div className="mx-auto max-w-6xl px-6 py-16" aria-label="Loading"><div className="h-8 w-56 animate-pulse rounded bg-border"/><div className="mt-6 h-40 animate-pulse rounded-xl bg-border"/></div>; }

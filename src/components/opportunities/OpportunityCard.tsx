@@ -4,6 +4,8 @@ import { Globe } from "lucide-react";
 import { DeadlineBadge } from "@/components/shared/DeadlineBadge";
 import { truncate } from "@/lib/utils";
 import type { Opportunity } from "@/types";
+import { TrustMetadata } from "@/components/shared/TrustMetadata";
+import { getOpportunityStatus, reopenLabel } from "@/lib/domain/status";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Scholarship:  "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -26,12 +28,10 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
   } = opportunity;
 
   const colorClass = CATEGORY_COLORS[category] ?? "bg-sage text-ink border-border";
+  const status = getOpportunityStatus(opportunity);
 
   return (
-    <Link
-      href={`/opportunities/${slug}`}
-      className="group card-base flex flex-col gap-3 no-underline"
-    >
+    <article className="group card-base flex flex-col gap-3">
       {/* Image */}
       {image ? (
         <div className="relative h-36 w-full overflow-hidden rounded-lg bg-sage">
@@ -63,13 +63,15 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
 
       {/* Title */}
       <h3 className="font-semibold text-ink text-[15px] leading-snug group-hover:text-forest transition-colors line-clamp-2">
-        {title}
+        <Link href={`/opportunities/${slug}`} className="no-underline">{title}</Link>
       </h3>
 
       {/* Description */}
       <p className="text-sm text-muted leading-relaxed line-clamp-2">
         {truncate(description, 120)}
       </p>
+      <p className="text-xs font-medium text-forest">{status === "closed" ? `Closed · ${reopenLabel(opportunity.cycle) ?? "This opportunity has closed"}` : status === "upcoming" ? "Upcoming" : status === "rolling" ? "Rolling applications" : status === "unknown" ? "Status unverified" : "Open"}</p>
+      <TrustMetadata slug={slug} verifiedAt={opportunity.verifiedAt} verifiedBy={opportunity.verifiedBy} sourceUrl={opportunity.source?.url ?? opportunity.officialLink} confidence={opportunity.confidence} staleAt={opportunity.verifiedAt} />
 
       {/* Countries */}
       <div className="flex items-center gap-1.5 mt-auto pt-1">
@@ -79,6 +81,6 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
           {countries.length > 3 && ` +${countries.length - 3} more`}
         </span>
       </div>
-    </Link>
+    </article>
   );
 }
