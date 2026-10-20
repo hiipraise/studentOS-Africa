@@ -79,7 +79,14 @@ async function buildDraft(db: Awaited<ReturnType<typeof getScriptDb>>["db"]) {
     updatedAt: now,
   };
 
-  await db.collection("digest_drafts").updateOne({ weekOf: draft.weekOf }, { $set: draft, $setOnInsert: { createdAt: now } }, { upsert: true });
+  await db.collection("digest_drafts").updateOne(
+    { weekOf: draft.weekOf },
+    {
+      $set: { weekOf: draft.weekOf, subject: draft.subject, html: draft.html, text: draft.text, counts: draft.counts, status: draft.status, updatedAt: draft.updatedAt },
+      $setOnInsert: { createdAt: draft.createdAt },
+    },
+    { upsert: true },
+  );
   return draft;
 }
 
