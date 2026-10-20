@@ -1,0 +1,40 @@
+{
+  "name": "opportunities_search",
+  "database": "studentos",
+  "collectionName": "opportunities",
+  "mappings": {
+    "dynamic": false,
+    "fields": {
+      "title": { "type": "string" },
+      "description": { "type": "string" },
+      "organisation": { "type": "string" },
+      "tags": { "type": "string" },
+      "eligibility": {
+        "type": "document",
+        "fields": {
+          "fields": { "type": "string" },
+          "levels": { "type": "token" },
+          "countries": { "type": "token" },
+          "regions": { "type": "token" }
+        }
+      },
+      "category": { "type": "token" },
+      "status": { "type": "token" },
+      "published": { "type": "boolean" },
+      "featured": { "type": "boolean" },
+      "funding": {
+        "type": "document",
+        "fields": {
+          "type": { "type": "token" },
+          "amountText": { "type": "string" }
+        }
+      },
+      "cycle": {
+        "type": "document",
+        "fields": {
+          "closesAt": { "type": "date" }
+        }
+      }
+    }
+  }
+}

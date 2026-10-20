@@ -5,6 +5,7 @@ import { DeadlineBadge } from "@/components/shared/DeadlineBadge";
 import { truncate } from "@/lib/utils";
 import type { Opportunity } from "@/types";
 import { TrustMetadata } from "@/components/shared/TrustMetadata";
+import { SaveButton } from "@/components/saved/SaveButton";
 import { getOpportunityStatus, reopenLabel } from "@/lib/domain/status";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -66,11 +67,12 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
         <Link href={`/opportunities/${slug}`} className="no-underline">{title}</Link>
       </h3>
 
-      {/* Description */}
-      <p className="text-sm text-muted leading-relaxed line-clamp-2">
-        {truncate(description, 120)}
-      </p>
-      <p className="text-xs font-medium text-forest">{status === "closed" ? `Closed · ${reopenLabel(opportunity.cycle) ?? "This opportunity has closed"}` : status === "upcoming" ? "Upcoming" : status === "rolling" ? "Rolling applications" : status === "unknown" ? "Status unverified" : "Open"}</p>
+      <p className="text-sm text-muted leading-relaxed line-clamp-2">{truncate(description, 120)}</p>
+
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-forest">{status === "closed" ? `Closed · ${reopenLabel(opportunity.cycle) ?? "This opportunity has closed"}` : status === "upcoming" ? "Upcoming" : status === "rolling" ? "Rolling applications" : status === "unknown" ? "Status unverified" : "Open"}</p>
+        <SaveButton slug={slug} title={title} deadline={(opportunity.cycle?.closesAt ?? deadline) ? new Date(opportunity.cycle?.closesAt ?? deadline!).toISOString() : null} compact />
+      </div>
       <TrustMetadata slug={slug} verifiedAt={opportunity.verifiedAt} verifiedBy={opportunity.verifiedBy} sourceUrl={opportunity.source?.url ?? opportunity.officialLink} confidence={opportunity.confidence} staleAt={opportunity.verifiedAt} />
 
       {/* Countries */}
