@@ -13,7 +13,7 @@ export async function getScriptDb(): Promise<{ db: Db; close: () => Promise<void
     await client.connect();
   }
 
-  const db = client.db("studentos");
+  const db = client.db(process.env.MONGODB_DB || "studentos");
   const close = async () => {
     if (client) {
       await client.close();

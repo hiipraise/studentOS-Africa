@@ -17,6 +17,9 @@ export interface PipelineStats {
   validated: number;
   rejected: number;
   stored: number;
+  newDrafts: number;
+  changesQueued: number;
+  duplicatesQueued: number;
   errors: string[];
 }
 

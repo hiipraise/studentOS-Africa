@@ -1,193 +1,87 @@
-/**
- * Scraper: Scholarship websites (multi-source)
- *
- * Extracts scholarship/opportunity listings from real aggregator sites
- * focused on African students and developing countries.
- *
- * Sources:
- *   - Scholars4Dev (scholars4dev.com) — scholarships for developing countries
- *   - Opportunity Desk (opportunitydesk.org) — global opportunities for youth
- *   - After School Africa (afterschoolafrica.com) — opportunities for Africans
- *
- * Selectors are based on their WordPress structures (common post patterns).
- * Run with --dry-run first and check if listings look correct; if a site
- * changes its theme, the selectors may need updating.
- *
- * Every scraped opportunity is stored as published: false — always review
- * before going live.
- */
-
+/** Ingests capped aggregator entries but stores only original summaries and official URLs. */
 import * as cheerio from "cheerio";
-import { fetchHtml, sleep } from "./lib/http";
-import {
-  OpportunitySchema,
-  type CreateOpportunityInput,
-} from "../../src/lib/schemas/opportunity";
+import { fetchHtml, fetchText, fetchWordPressFeed, sleep } from "./lib/http";
+import { OpportunitySchema, type CreateOpportunityInput } from "../../src/lib/schemas/opportunity";
 import type { RawScrapedItem } from "./lib/types";
 import type { PipelineConfig } from "./lib/pipeline";
+import { enrichOpportunity } from "./lib/extract-opportunity";
 
-interface ScholarshipSource {
-  name: string;
-  url: string;
-  /** Base URL for resolving relative links */
-  baseUrl: string;
-  selectors: {
-    listItem: string;
-    title: string;
-    link: string;
-    description?: string;
-  };
-  /** Default category for items from this source */
-  defaultCategory: string;
+interface Source { name: string; url: string; selectors: { item: string; title: string; link: string; description: string } }
+const SOURCES: Source[] = [
+  { name: "scholars4dev", url: "https://www.scholars4dev.com/", selectors: { item: ".post", title: "h2 a", link: "h2 a", description: ".entry" } },
+  { name: "opportunity-desk", url: "https://opportunitydesk.org/", selectors: { item: "article", title: "h2 a", link: "h2 a", description: "article p, .entry-content, .post-content" } },
+];
+const MAX_ITEMS_PER_SOURCE = 10;
+const isHttp = (value: string) => /^https?:\/\//i.test(value);
+const ignoredHosts = new Set(["facebook.com", "instagram.com", "linkedin.com", "twitter.com", "x.com", "youtube.com", "t.me"]);
+
+function findOfficialLink(articleHtml: string, articleUrl: string) {
+  const $ = cheerio.load(articleHtml); const articleHost = new URL(articleUrl).hostname.replace(/^www\./, "");
+  const candidates: Array<{ url: string; priority: number }> = [];
+  $("a[href]").each((_, anchor) => {
+    const href = $(anchor).attr("href"); if (!href || (!isHttp(href) && !href.startsWith("/"))) return;
+    try {
+      const url = new URL(href, articleUrl); const host = url.hostname.replace(/^www\./, "");
+      if (host === articleHost || [...ignoredHosts].some((ignored) => host === ignored || host.endsWith("." + ignored))) return;
+      const label = ($(anchor).text() + " " + ($(anchor).attr("aria-label") ?? "") + " " + ($(anchor).attr("title") ?? "")).toLowerCase();
+      candidates.push({ url: url.toString(), priority: /official|apply|application|programme website|program website|visit website/.test(label) ? 0 : 1 });
+    } catch { /* malformed URL */ }
+  });
+  candidates.sort((a,b) => a.priority-b.priority); return candidates[0]?.url ?? null;
 }
 
-// ── Real scholarship aggregator sources ─────────────────────────────────────
-// Selectors verified against live page HTML (June 2026).
-const SOURCES: ScholarshipSource[] = [
-  {
-    name: "scholars4dev",
-    url: "https://www.scholars4dev.com/",
-    baseUrl: "https://www.scholars4dev.com",
-    selectors: {
-      // Posts are <li class="post clearfix"> with <h2><a href="...">Title</a></h2>
-      listItem: ".post",
-      title: "h2 a",
-      link: "h2 a",
-      description: ".entry",
-    },
-    defaultCategory: "Scholarship",
-  },
-  {
-    name: "opportunity-desk",
-    url: "https://www.opportunitydesk.org/",
-    baseUrl: "https://www.opportunitydesk.org",
-    selectors: {
-      // Posts are <article> elements with <h2><a href="...">Title</a></h2>
-      listItem: "article",
-      title: "h2 a",
-      link: "h2 a",
-      description: "article p, .entry-content, .post-content",
-    },
-    defaultCategory: "Scholarship",
-  },
-];
-
-/** Rough country detection from keywords in title/description */
-function detectCountries(title: string, description: string): string[] {
-  const countryKeywords: Record<string, RegExp> = {
-    Africa: /africa/gi,
-    USA: /(united states|usa|american|us based)/gi,
-    UK: /(united kingdom|uk |british|england|scotland|wales)/gi,
-    Germany: /germany|german|daad/gi,
-    Canada: /canada|canadian/gi,
-    Australia: /australia|australian/gi,
-    China: /china|chinese/gi,
-    "South Africa": /south africa|south african/gi,
-    France: /france|french/gi,
-    Netherlands: /netherlands|dutch|holland/gi,
-    Sweden: /sweden|swedish/gi,
-    Italy: /italy|italian/gi,
-    Japan: /japan|japanese/gi,
-    India: /india|indian/gi,
-    Brazil: /brazil|brazilian/gi,
-    "New Zealand": /new zealand/gi,
-    Switzerland: /switzerland|swiss/gi,
-  };
-
-  const text = `${title} ${description}`;
-  const found: string[] = [];
-  for (const [country, regex] of Object.entries(countryKeywords)) {
-    if (regex.test(text)) found.push(country);
-  }
-  return found.length > 0 ? found : ["International (check official link)"];
+async function getFeedItems(source: Source) {
+  const feed = await fetchWordPressFeed(source.url, MAX_ITEMS_PER_SOURCE); if (feed.length) return feed;
+  const html = await fetchHtml(source.url); const $ = cheerio.load(html);
+  return $(source.selectors.item).toArray().slice(0, MAX_ITEMS_PER_SOURCE).map((element) => {
+    const node = $(element); const anchor = node.find(source.selectors.link).first(); const href = anchor.attr("href");
+    return { url: href ? new URL(href, source.url).toString() : "", titleHtml: anchor.text(), excerptHtml: "", contentHtml: "" };
+  }).filter((item) => item.url && item.titleHtml.trim());
 }
 
 async function extract(): Promise<RawScrapedItem[]> {
-  const items: RawScrapedItem[] = [];
-
+  const result: RawScrapedItem[] = [];
   for (const source of SOURCES) {
     try {
-      const html = await fetchHtml(source.url);
-      const $ = cheerio.load(html);
-
-      $(source.selectors.listItem).each((_, el) => {
-        const $el = $(el);
-        const titleEl = $el.find(source.selectors.title).first();
-        const title = titleEl.text().trim();
-        const href = $el.find(source.selectors.link).first().attr("href");
-        const description = source.selectors.description
-          ? $el.find(source.selectors.description).first().text().trim()
-          : "";
-
-        if (title && title.length >= 5) {
-          items.push({
-            source: source.name,
-            raw: {
-              title,
-              href,
-              description,
-              sourceUrl: source.baseUrl,
-              defaultCategory: source.defaultCategory,
-            },
-          });
-        }
-      });
-
-      // Be polite — small delay between sources
+      const posts = await getFeedItems(source);
+      for (const post of posts.slice(0, MAX_ITEMS_PER_SOURCE)) {
+        const title = cheerio.load(post.titleHtml).text().trim().slice(0, 200); if (!title || !isHttp(post.url)) continue;
+        try {
+          const article = await fetchHtml(post.url); const officialLink = findOfficialLink(article, post.url);
+          if (!officialLink) { console.info("Skipping " + title + ": no official programme link found."); continue; }
+          const officialPage = await fetchText(officialLink);
+          const officialDocument = cheerio.load(officialPage.text);
+          officialDocument("script,style,noscript,svg").remove();
+          const officialText = officialDocument.root().text().replace(/\s+/g, " ").trim().slice(0, 50000);
+          if (officialText.length < 100) { console.info("Skipping " + title + ": official page had insufficient content."); continue; }
+          result.push({ source: source.name, raw: { title, sourceUrl: post.url, sourcePostUrl: post.url, aggregatorUrl: source.url, officialLink: officialPage.url, sourceContent: officialText } });
+        } catch (error) { console.info("Skipping " + title + ": " + (error instanceof Error ? error.message : String(error))); }
+      }
       await sleep(1000);
-    } catch (err) {
-      console.error(`  ⚠ Failed to extract from ${source.name}:`, err);
-    }
+    } catch (error) { console.error("Source " + source.name + " failed:", error); }
   }
-
-  return items;
+  return result;
 }
 
+function slugify(title: string) { return title.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_-]+/g, "-").slice(0, 220).replace(/-+$/g, ""); }
 function normalize(raw: RawScrapedItem): CreateOpportunityInput | null {
-  const { title, href, description, sourceUrl, defaultCategory } = raw.raw;
-  if (!title || !href) return null;
-
-  const slug = String(title)
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 220);
-
-  if (!slug) return null;
-
-  const officialLink = href.startsWith("http")
-    ? href
-    : new URL(href, sourceUrl).toString();
-
-  const descText = description
-    ? String(description).slice(0, 2000)
-    : `Scraped from ${raw.source} — description needs manual review.`;
-
-  const countries = detectCountries(title, descText);
-
+  const title = String(raw.raw.title ?? ""); const officialLink = String(raw.raw.officialLink ?? "");
+  if (!title || !isHttp(officialLink)) return null;
+  const slug = slugify(title); if (slug.length < 3) return null;
   return {
-    title: String(title).slice(0, 200),
-    slug,
-    description: descText,
-    category: defaultCategory || "Scholarship",
-    countries,
-    deadline: null,
-    requirements: [],
-    benefits: [],
-    applicationSteps: [],
-    officialLink,
-    featured: false,
-    published: false,
+    title: title.slice(0, 200), slug,
+    description: "Review the official programme page for current eligibility, funding, dates and application requirements.",
+    category: "Scholarship", tags: [], countries: ["Global"], deadline: null,
+    eligibility: { countries: [], regions: ["GLOBAL"], levels: [], fields: [], notes: "Eligibility requires review on the official programme page." },
+    funding: { type: "unknown" }, status: "unknown", source: { type: "aggregator", url: String(raw.raw.aggregatorUrl) },
+    confidence: "low", needsReview: true, requirements: [], benefits: [], applicationSteps: [],
+    officialLink, featured: false, published: false,
   };
 }
 
 export const scholarshipSitesPipeline: PipelineConfig<CreateOpportunityInput> = {
-  source: "scholarship-sites",
-  collectionName: "opportunities",
-  extract,
-  schema: OpportunitySchema,
-  normalize,
-  upsertKey: (item) => ({ slug: item.slug }),
+  source: "scholarship-sites", collectionName: "opportunities", extract,
+  schema: OpportunitySchema, normalize, upsertKey: (item) => ({ slug: item.slug }),
+  enrich: enrichOpportunity,
+  sourceContent: (raw) => String(raw.raw.sourceContent ?? ""),
 };

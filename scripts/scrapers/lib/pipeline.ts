@@ -10,7 +10,9 @@
 
 import type { ZodType, ZodTypeDef } from "zod";
 import type { Db } from "mongodb";
-import type { RawScrapedItem, PipelineStats, PipelineOptions } from "./types";
+import type { RawScrapedItem, PipelineStats, PipelineOptions } from "./types";import { createHash } from "node:crypto";
+import { findDuplicate } from "./dedupe";
+import { contentChanged, scraperOwnedSet } from "./upsert-policy";
 
 export interface PipelineConfig<TNormalized> {
   source: string;
@@ -29,6 +31,9 @@ export interface PipelineConfig<TNormalized> {
   normalize: (raw: RawScrapedItem) => TNormalized | null;
   /** Field to upsert on, so re-running doesn't create duplicates */
   upsertKey: (item: TNormalized) => Record<string, unknown>;
+  /** Content fetched from the official site; used only for hashing/change detection. */
+  sourceContent?: (raw: RawScrapedItem) => string;
+  enrich?: (item: TNormalized, raw: RawScrapedItem, db: Db) => Promise<TNormalized>;
 }
 
 export async function runPipeline<TNormalized>(
@@ -42,6 +47,9 @@ export async function runPipeline<TNormalized>(
     validated: 0,
     rejected: 0,
     stored: 0,
+    newDrafts: 0,
+    changesQueued: 0,
+    duplicatesQueued: 0,
     errors: [],
   };
 
@@ -61,7 +69,7 @@ export async function runPipeline<TNormalized>(
   }
 
   // ── Normalize + Validate ────────────────────────────────────────────
-  const validItems: TNormalized[] = [];
+  const validItems: Array<{ item: TNormalized; raw: RawScrapedItem }> = [];
 
   for (const raw of rawItems) {
     try {
@@ -71,7 +79,8 @@ export async function runPipeline<TNormalized>(
         continue;
       }
 
-      const parsed = config.schema.safeParse(normalized);
+      const enriched = db && config.enrich ? await config.enrich(normalized, raw, db) : normalized;
+      const parsed = config.schema.safeParse(enriched);
       if (!parsed.success) {
         stats.rejected++;
         stats.errors.push(
@@ -80,7 +89,7 @@ export async function runPipeline<TNormalized>(
         continue;
       }
 
-      validItems.push(parsed.data);
+      validItems.push({ item: parsed.data, raw });
       stats.validated++;
     } catch (err) {
       stats.rejected++;
@@ -96,28 +105,68 @@ export async function runPipeline<TNormalized>(
   // ── Store ────────────────────────────────────────────────────────────
   if (options.dryRun || !db) {
     console.log(`  Store      → SKIPPED (${options.dryRun ? "--dry-run" : "no DB connection"})`);
-    console.log(`  Preview of first item:`, JSON.stringify(validItems[0], null, 2));
+    console.log(`  Preview of first item:`, JSON.stringify(validItems[0]?.item ?? null, null, 2));
     return stats;
   }
 
   const col = db.collection(config.collectionName);
 
-  for (const item of validItems) {
+  const review = db.collection("review_queue");
+  for (const { item, raw } of validItems) {
     try {
       const now = new Date();
-      await col.updateOne(
-        config.upsertKey(item),
-        { $set: { ...item, updatedAt: now }, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
-      stats.stored++;
+      const sourceUrl = String(raw.raw.sourcePostUrl ?? raw.raw.sourceUrl ?? "");
+      const aggregatorUrl = String(raw.raw.aggregatorUrl ?? raw.raw.sourceUrl ?? "");
+      const content = config.sourceContent?.(raw) ?? String(raw.raw.sourceContent ?? raw.raw.description ?? JSON.stringify(raw.raw));
+      const sourceHash = createHash("sha256").update(content).digest("hex");
+      const key = config.upsertKey(item);
+      const existing = await col.findOne<Record<string, unknown>>(key);
+      const record = item as Record<string, unknown>;
+      const metadata = {
+        source: { type: "aggregator", url: aggregatorUrl }, sourceUrl, sourceHash,
+        lastSeenAt: now,
+      };
+      if (existing) {
+        // Editorial state is never controlled by a scraper. Detect upstream changes and queue them.
+        if (contentChanged(existing.sourceHash as string | undefined, sourceHash)) {
+          const pending = await review.findOne({ kind: "listing-changed", targetSlug: existing.slug, sourceHash, status: "pending" });
+          if (!pending) {
+            await review.insertOne({ kind: "listing-changed", entityType: config.collectionName, targetSlug: existing.slug, title: existing.title, live: existing, payload: record, sourceUrl, sourceHash, status: "pending", createdAt: now });
+            stats.changesQueued++;
+          }
+          await col.updateOne(key, { $set: { lastSeenAt: now, needsReview: true } });
+        } else {
+          // Only refresh ingestion-owned metadata. Any field explicitly marked admin-edited remains untouched.
+          const safeMetadata = scraperOwnedSet(existing as { editedByAdmin?: string[] }, metadata);
+          await col.updateOne(key, { $set: safeMetadata });
+        }
+        stats.stored++;
+        continue;
+      }
+
+      const existingRecords = await col.find({}, { projection: { title: 1, officialLink: 1, cycle: 1, deadline: 1, slug: 1 } }).limit(5000).toArray() as Array<{ title?: string; officialLink?: string; cycle?: { year?: number }; deadline?: Date | null; slug?: string }>;
+      const duplicate = findDuplicate({ title: String(record.title ?? ""), officialLink: String(record.officialLink ?? ""), cycleYear: (record.cycle as { year?: number } | undefined)?.year }, existingRecords);
+      if (duplicate) {
+        const candidateKey = createHash("sha256").update(`${String(record.title)}:${String(record.officialLink)}`).digest("hex");
+        const pending = await review.findOne({ kind: "possible-duplicate", candidateKey, status: "pending" });
+        if (!pending) {
+          await review.insertOne({ kind: "possible-duplicate", entityType: config.collectionName, targetSlug: duplicate.slug, title: record.title, live: duplicate, payload: record, candidateKey, sourceUrl, sourceHash, status: "pending", createdAt: now });
+          stats.duplicatesQueued++;
+        }
+        continue;
+      }
+
+      const newRecord = { ...record, ...metadata, source: { type: "aggregator", url: aggregatorUrl }, firstSeenAt: now,
+        published: false, featured: false, needsReview: true, confidence: "low", editedByAdmin: [], createdAt: now, updatedAt: now };
+      await col.insertOne(newRecord);
+      stats.stored++; stats.newDrafts++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       stats.errors.push(`Store failed: ${msg}`);
     }
   }
 
-  console.log(`  Store      → ${stats.stored} upserted into "${config.collectionName}"`);
+  console.log(`  Store      → ${stats.newDrafts} new drafts, ${stats.changesQueued} changes queued, ${stats.duplicatesQueued} possible duplicates in "${config.collectionName}"`);
 
   return stats;
 }

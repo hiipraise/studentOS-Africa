@@ -2,14 +2,11 @@
  * StudentOS Africa — Scraper CLI Runner
  *
  * Usage:
- *   npm run scrape:github-pack
  *   npm run scrape:scholarships
- *   npm run scrape:ai-tools
- *   npm run scrape:student-offers
  *   npm run scrape:all
  *
  *   Add --dry-run to any of the above to preview without writing to MongoDB:
- *   npm run scrape:github-pack -- --dry-run
+ *   npm run scrape:scholarships -- --dry-run
  *
  * All scraped content is stored with published: false — review it in the
  * Admin Dashboard (or directly in MongoDB) before it goes live. Scrapers
@@ -21,21 +18,17 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 import { getScriptDb } from "./lib/db";
+import { beginCrawlRun } from "./lib/http";
 import { runPipeline, type PipelineConfig } from "./lib/pipeline";
-import { githubStudentPackPipeline } from "./github-student-pack";
+import type { PipelineStats } from "./lib/types";
 import { scholarshipSitesPipeline } from "./scholarship-sites";
-import { aiToolDirectoriesPipeline } from "./ai-tool-directories";
-import { studentOffersPipeline } from "./student-offers";
 
 // The registry intentionally stores pipelines with different validated item shapes.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyPipeline = PipelineConfig<any>;
 
 const PIPELINES: Record<string, AnyPipeline> = {
-  "github-pack": githubStudentPackPipeline,
   scholarships: scholarshipSitesPipeline,
-  "ai-tools": aiToolDirectoriesPipeline,
-  "student-offers": studentOffersPipeline,
 };
 
 function parseArgs() {
@@ -47,6 +40,7 @@ function parseArgs() {
 }
 
 async function main() {
+  beginCrawlRun();
   const { source, dryRun } = parseArgs();
 
   console.log("🕷️  StudentOS Africa Scraper");
@@ -72,23 +66,28 @@ async function main() {
     ? { db: null, close: async () => {} }
     : await getScriptDb();
 
-  const allStats = [];
-  for (const pipeline of toRun) {
-    const stats = await runPipeline(pipeline, db, { dryRun });
-    allStats.push(stats);
-  }
+  const runCollection = db?.collection("ingest_runs");
+  const run = { source, status: "running", startedAt: new Date(), extracted: 0, validated: 0, rejected: 0, stored: 0, newDrafts: 0, changesQueued: 0, duplicatesQueued: 0, errors: [] as string[] };  const runId = runCollection ? (await runCollection.insertOne(run)).insertedId : null;
+  try {
+    const allStats = [];
+    for (const pipeline of toRun) allStats.push(await runPipeline(pipeline, db, { dryRun }));
+    const totals = allStats.reduce<PipelineStats>((sum, stats) => ({ source: "all", extracted: sum.extracted + stats.extracted, validated: sum.validated + stats.validated, rejected: sum.rejected + stats.rejected, stored: sum.stored + stats.stored, newDrafts: sum.newDrafts + stats.newDrafts, changesQueued: sum.changesQueued + stats.changesQueued, duplicatesQueued: sum.duplicatesQueued + stats.duplicatesQueued, errors: [...sum.errors, ...stats.errors.map((error) => stats.source + ": " + error)] }), { ...run, source: "all" });
+    console.log("\n📊 Summary");
+    for (const stats of allStats) console.log("  " + stats.source.padEnd(20) + " extracted=" + stats.extracted + " validated=" + stats.validated + " drafts=" + stats.newDrafts + " changes=" + stats.changesQueued + " duplicates=" + stats.duplicatesQueued + " rejected=" + stats.rejected);
+    if (runCollection && runId) await runCollection.updateOne({ _id: runId }, { $set: { ...totals, status: totals.errors.length ? "partial" : "success", completedAt: new Date() } });
+    if (!dryRun) await notifyOwner("StudentOS ingestion: " + totals.newDrafts + " drafts, " + totals.changesQueued + " changes, " + totals.duplicatesQueued + " duplicate candidates. Errors: " + totals.errors.length);
+    if (totals.errors.length) process.exitCode = 1;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (runCollection && runId) await runCollection.updateOne({ _id: runId }, { $set: { status: "failed", errors: [message], completedAt: new Date() } });
+    throw error;
+  } finally { await close(); }
+}
 
-  console.log("\n📊 Summary");
-  for (const s of allStats) {
-    console.log(
-      `  ${s.source.padEnd(20)} extracted=${s.extracted} validated=${s.validated} rejected=${s.rejected} stored=${s.stored}`
-    );
-    if (s.errors.length > 0) {
-      console.log(`    ⚠ ${s.errors.length} error(s) — first: ${s.errors[0]}`);
-    }
-  }
-
-  await close();
+async function notifyOwner(message: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN; const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  await fetch("https://api.telegram.org/bot" + token + "/sendMessage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: message.slice(0, 3500) }) }).then((response) => { if (!response.ok) console.warn("Telegram run summary failed with HTTP " + response.status); }).catch((error) => console.warn("Telegram notification unavailable:", error));
 }
 
 main().catch((err) => {

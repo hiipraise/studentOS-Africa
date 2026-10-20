@@ -21,6 +21,7 @@ export const opportunitiesSeed: CreateOpportunityInput[] = [
     description:
       "A pan-African scholarship program delivered through partner universities worldwide, covering full tuition, accommodation, and a living stipend for academically talented students facing financial barriers. Each partner institution (Cambridge, McGill, Sciences Po, Makerere, and many others) runs its own admissions and funding deadline.",
     category: "Scholarship",
+    tags: [],
     countries: ["All African Countries"],
     deadline: null,
     requirements: [
@@ -52,6 +53,7 @@ export const opportunitiesSeed: CreateOpportunityInput[] = [
     description:
       "The UK government's global scholarship programme, funded by the Foreign, Commonwealth & Development Office. Chevening funds a fully-funded one-year Master's degree at any UK university, along with leadership training and a lifelong international network. Open to citizens of more than 160 countries and territories, including most African nations.",
     category: "Scholarship",
+    tags: [],
     countries: ["Nigeria", "Kenya", "Ghana", "South Africa", "Ethiopia", "Uganda"],
     deadline: new Date("2026-10-07T12:00:00Z"),
     requirements: [
@@ -86,6 +88,7 @@ export const opportunitiesSeed: CreateOpportunityInput[] = [
     description:
       "Africa's flagship entrepreneurship philanthropy programme, providing non-refundable seed capital, twelve weeks of business training, and mentorship to early-stage entrepreneurs across all 54 African countries. Since 2015 the programme has funded over 24,000 entrepreneurs through TEFConnect.",
     category: "Grant",
+    tags: [],
     countries: ["All 54 African Countries"],
     deadline: null,
     requirements: [
@@ -116,6 +119,7 @@ export const opportunitiesSeed: CreateOpportunityInput[] = [
     description:
       "The flagship exchange program of the U.S. Government's Young African Leaders Initiative (YALI), bringing accomplished young African leaders to the United States for a six-week Leadership Institute, a Summit in Washington D.C., and ongoing professional development opportunities.",
     category: "Fellowship",
+    tags: [],
     countries: ["Sub-Saharan Africa"],
     deadline: null,
     requirements: [
@@ -146,6 +150,7 @@ export const opportunitiesSeed: CreateOpportunityInput[] = [
     description:
       "The German Academic Exchange Service (DAAD) offers a wide range of fully and partially funded scholarships for African students to pursue Bachelor's, Master's, and PhD study in Germany — where most public universities charge no tuition fees. Programmes and deadlines vary by field of study and degree level.",
     category: "Scholarship",
+    tags: [],
     countries: ["All African Countries"],
     deadline: null,
     requirements: [
@@ -176,6 +181,7 @@ export const opportunitiesSeed: CreateOpportunityInput[] = [
     description:
       "A global competition for young social entrepreneurs (25 and under) tackling problems in their own communities. Winners join the Resolution Fellowship for life — receiving seed funding, mentorship, and a lifelong network of peer social entrepreneurs.",
     category: "Competition",
+    tags: [],
     countries: ["Global — Open to African Applicants"],
     deadline: null,
     requirements: [
