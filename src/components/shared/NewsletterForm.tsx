@@ -53,7 +53,7 @@ export function NewsletterForm({ variant = "light" }: NewsletterFormProps) {
         )}
       >
         <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-        You&apos;re subscribed. Welcome aboard!
+        Check your inbox to confirm your subscription.
       </div>
     );
   }
