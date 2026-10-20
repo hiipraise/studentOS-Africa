@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { getLatestGuides } from "@/lib/data/guides";
 
 export async function LatestGuides() {
-  const guides = await getLatestGuides(4);
+  const guides = await getLatestGuides(4).catch(() => []);
   const [featured, ...rest] = guides;
 
   return (

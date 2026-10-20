@@ -29,13 +29,13 @@ export default async function AdminDashboardPage() {
 
   const sevenDays = new Date(Date.now() + 7 * 86400000);
   const staleDate = new Date(Date.now() - 45 * 86400000);
-  const [opportunityCount, benefitCount, toolCount, guideCount, reportCount, subscriberCount, attentionCount, drafts, brokenLinks, closingSoon, staleListings] =
+  const [opportunityCount, benefitCount, toolCount, guideCount, reportCount, subscriberCount, attentionCount, drafts, brokenLinks, closingSoon, staleListings, latestRuns] =
     await Promise.all([
       db.collection(Collections.opportunities).countDocuments(),
       db.collection(Collections.benefits).countDocuments(),
       db.collection(Collections.tools).countDocuments(),
       db.collection(Collections.guides).countDocuments(),
-      db.collection(Collections.reports).countDocuments({ status: "pending" }),
+      db.collection(Collections.reports).countDocuments({ $or: [{ moderation: "pending" }, { moderation: { $exists: false }, status: "pending" }] }),
       db.collection(Collections.newsletter).countDocuments(),
       db.collection(Collections.needsAttention).countDocuments({ resolved: { $ne: true }, kind: /outdated|report/i }),
       Promise.all([Collections.opportunities, Collections.benefits, Collections.tools, Collections.guides].map((name) => db.collection(name).countDocuments({ published: false }))).then((counts) => counts.reduce((sum, n) => sum + n, 0)),
@@ -45,6 +45,7 @@ export default async function AdminDashboardPage() {
         db.collection(Collections.opportunities).countDocuments({ published: true, $or: [{ verifiedAt: { $lt: staleDate } }, { verifiedAt: { $exists: false } }] }),
         db.collection(Collections.benefits).countDocuments({ published: true, $or: [{ lastChecked: { $lt: staleDate } }, { lastChecked: { $exists: false } }] }),
       ]).then((counts) => counts.reduce((sum, n) => sum + n, 0)),
+      db.collection("ingest_runs").find({}).sort({ startedAt: -1 }).limit(5).toArray(),
     ]);
 
   const cards: CollectionCount[] = [
@@ -110,6 +111,11 @@ export default async function AdminDashboardPage() {
             Welcome back. Here&apos;s an overview of StudentOS Africa.
           </p>
         </div>
+      </div>
+
+      <div className="mt-10 rounded-xl border bg-white p-5">
+        <h2 className="text-lg font-semibold mb-3">Recent ingestion runs</h2>
+        {latestRuns.length ? <div className="divide-y">{latestRuns.map((run) => <div key={run._id.toString()} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{String(run.source)} · {String(run.status)}</span><span className="text-muted">{run.startedAt?.toISOString?.() ?? ""} · {Number(run.newDrafts ?? 0)} drafts · {Number(run.changesQueued ?? 0)} changed · {Array.isArray(run.errors) ? run.errors.length : 0} errors</span></div>)}</div> : <p className="text-sm text-muted">No scheduled ingestion runs recorded yet.</p>}
       </div>
 
       {/* Stats grid */}

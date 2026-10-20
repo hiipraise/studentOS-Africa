@@ -34,6 +34,19 @@ jobs:
         env:
           MONGODB_URI: mongodb://127.0.0.1:27017/studentos
           MONGODB_DB: studentos
+      - run: npm run migrate:reports-v2 -- --dry-run
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/studentos
+          MONGODB_DB: studentos
+      - run: npm run job:stale -- --warn-only
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/studentos
+          MONGODB_DB: studentos
+      - run: npm run job:digest
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/studentos
+          MONGODB_DB: studentos
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
       - run: npm run build
         env:
           AUTH_SECRET: ci-only-test-secret-with-enough-entropy

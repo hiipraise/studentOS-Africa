@@ -2,19 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { HomeSearchBar } from "@/components/home/HomeSearchBar";
+import { useLocale } from "@/lib/use-locale";
 
-const WORDS = ["Scholarships.", "Fellowships.", "Internships.", "Grants.", "Hackathons."];
 const CYCLE_MS = 2200;
 
 export function Hero() {
+  const { t } = useLocale();
+  const words = t("hero.words").split("|");
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setIndex((i) => (i + 1) % WORDS.length);
+      setIndex((current) => (current + 1) % words.length);
     }, CYCLE_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [words.length]);
 
   return (
     <section className="relative overflow-hidden bg-canvas">
@@ -43,7 +45,7 @@ export function Hero() {
           {/* Eyebrow */}
           <span className="inline-flex items-center gap-2 rounded-full border border-forest/20 bg-forest/5 px-4 py-1.5 text-xs font-semibold text-forest">
             <span className="h-1.5 w-1.5 rounded-full bg-forest animate-pulse-slow" aria-hidden="true" />
-            Built for African students
+            {t("hero.eyebrow")}
           </span>
 
           {/* Headline with cycling word */}
@@ -54,17 +56,16 @@ export function Hero() {
                 key={index}
                 className="font-display italic text-forest animate-fade-in"
               >
-                {WORDS[index]}
+                {words[index % words.length]}
               </span>
             </span>
             <br />
-            Built for Africa.
+            {t("hero.built")}
           </h1>
 
           {/* Subhead */}
           <p className="max-w-xl text-base md:text-lg text-muted leading-relaxed">
-            Scholarships, internships, fellowships, student benefits, and free tools —
-            all in one place, curated for students across the continent.
+            {t("hero.subhead")}
           </p>
 
           {/* Search bar */}
@@ -74,11 +75,11 @@ export function Hero() {
 
           {/* Quick stats / trust */}
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-4 text-xs text-muted">
-            <span>🎓 Scholarships across 30+ countries</span>
+            <span>{t("hero.stat1")}</span>
             <span className="hidden sm:inline text-border">•</span>
-            <span>🛠️ Free student tools</span>
+            <span>{t("hero.stat2")}</span>
             <span className="hidden sm:inline text-border">•</span>
-            <span>📬 Weekly opportunity drops</span>
+            <span>{t("hero.stat3")}</span>
           </div>
         </div>
       </div>

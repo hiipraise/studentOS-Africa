@@ -1,0 +1,80 @@
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: "0 7 * * *"   # deadline reminders, daily
+    - cron: "0 8 * * 1"   # digest draft, Monday
+    - cron: "0 9 * * *"   # Telegram posts, daily
+    - cron: "0 2 * * *"   # stale listings + health summary, daily
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run manually
+        required: true
+        default: reminders
+        type: choice
+        options: [reminders, digest, telegram, stale]
+
+concurrency:
+  group: scheduled-jobs
+  cancel-in-progress: false
+
+env:
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}
+  MONGODB_DB: ${{ vars.MONGODB_DB || 'studentos' }}
+  NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://studentos.africa' }}
+  SENDHIIV_API_KEY: ${{ secrets.SENDHIIV_API_KEY }}
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+  EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  STALE_LISTING_LIMIT: ${{ vars.STALE_LISTING_LIMIT || '50' }}
+  BROKEN_LINK_LIMIT: ${{ vars.BROKEN_LINK_LIMIT || '10' }}
+
+jobs:
+  reminders:
+    if: github.event.schedule == '0 7 * * *' || github.event.inputs.job == 'reminders'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run job:reminders
+
+  digest:
+    if: github.event.schedule == '0 8 * * 1' || github.event.inputs.job == 'digest'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run job:digest
+
+  telegram:
+    if: github.event.schedule == '0 9 * * *' || github.event.inputs.job == 'telegram'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run job:telegram
+
+  stale:
+    if: github.event.schedule == '0 2 * * *' || github.event.inputs.job == 'stale'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run job:stale
+      - name: Health probe
+        run: |
+          curl --fail --silent --show-error "$NEXT_PUBLIC_APP_URL/api/health" || echo "Health endpoint unavailable; check the Vercel logs."

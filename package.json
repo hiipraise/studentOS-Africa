@@ -12,14 +12,17 @@
     "test:e2e": "playwright test",
     "ensure-indexes": "tsx scripts/ensure-indexes.ts",
     "migrate:opportunities-v2": "tsx scripts/migrations/opportunity-v2.ts",
+    "migrate:reports-v2": "tsx scripts/migrations/report-v2.ts",
     "import:opportunities": "tsx scripts/import-opportunities.ts",
     "seed": "tsx scripts/seed.ts",
     "scrape": "tsx scripts/scrapers/run.ts",
-    "scrape:github-pack": "tsx scripts/scrapers/run.ts --source=github-pack",
     "scrape:scholarships": "tsx scripts/scrapers/run.ts --source=scholarships",
-    "scrape:ai-tools": "tsx scripts/scrapers/run.ts --source=ai-tools",
-    "scrape:student-offers": "tsx scripts/scrapers/run.ts --source=student-offers",
-    "scrape:all": "tsx scripts/scrapers/run.ts --source=all"
+    "scrape:all": "tsx scripts/scrapers/run.ts --source=all",
+    "check-links": "tsx scripts/jobs/check-links.ts",
+    "job:reminders": "tsx scripts/jobs/send-reminders.ts",
+    "job:digest": "tsx scripts/jobs/send-digest.ts",
+    "job:telegram": "tsx scripts/jobs/telegram-post.ts",
+    "job:stale": "tsx scripts/jobs/stale-listings.ts"
   },
   "dependencies": {
     "cheerio": "1.0.0",

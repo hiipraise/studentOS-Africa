@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { getTrendingOpportunities } from "@/lib/data/opportunities";
 
 export async function TrendingOpportunities() {
-  const opportunities = await getTrendingOpportunities(6);
+  const opportunities = await getTrendingOpportunities(6).catch(() => []);
 
   return (
     <section className="section">

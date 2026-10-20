@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { getFeaturedBenefits } from "@/lib/data/benefits";
 
 export async function FeaturedBenefits() {
-  const benefits = await getFeaturedBenefits(4);
+  const benefits = await getFeaturedBenefits(4).catch(() => []);
 
   return (
     <section className="section-muted">

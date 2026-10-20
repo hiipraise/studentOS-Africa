@@ -13,6 +13,7 @@ import {
   Mail,
   ClipboardList,
   BadgeCheck,
+  BarChart3,
   LogOut,
   ExternalLink,
   ChevronLeft,
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { href: "/admin/review", label: "Review queue", icon: ClipboardList },
   { href: "/admin/verification", label: "Verification", icon: BadgeCheck },
   { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
+  { href: "/admin/insights", label: "Insights", icon: BarChart3 },
 ] as const;
 
 export function AdminSidebar() {

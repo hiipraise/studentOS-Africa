@@ -40,6 +40,15 @@ export async function getGuideBySlug(slug: string) {
     .findOne({ slug, published: true });
 }
 
+export async function getPublishedGuideSlugs(limit = 500) {
+  const db = await getDb();
+  return db
+    .collection<Guide>(Collections.guides)
+    .find({ published: true }, { projection: { slug: 1 } })
+    .limit(limit)
+    .toArray();
+}
+
 export async function getLatestGuides(limit = 4) {
   const db = await getDb();
   return db

@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { getFeaturedTools } from "@/lib/data/tools";
 
 export async function FeaturedTools() {
-  const tools = await getFeaturedTools(4);
+  const tools = await getFeaturedTools(4).catch(() => []);
 
   return (
     <section className="section">
