@@ -22,8 +22,14 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Test coverage
+# Test coverage and reports
 coverage/
+test-results/
+playwright-report/
+
+# Local verification scratch output
+.tsc-out.txt
+.build-out.txt
 
 # Editor / IDE
 .idea/

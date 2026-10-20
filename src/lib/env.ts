@@ -6,6 +6,13 @@ const schema = z.object({
   AUTH_SECRET: z.string().optional(), AUTH_GOOGLE_ID: z.string().optional(), AUTH_GOOGLE_SECRET: z.string().optional(),
   ADMIN_EMAILS: z.string().default(""), CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(), CLOUDINARY_API_SECRET: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(), SENDHIIV_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  TELEGRAM_BOT_TOKEN: z.string().optional(), TELEGRAM_CHAT_ID: z.string().optional(),
+  GROQ_FINDER_MODEL: z.string().optional(), GROQ_INGEST_MODEL: z.string().optional(),
+  TURNSTILE_SECRET: z.string().optional(),
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  CRON_SECRET: z.string().optional(),
 });
 export function getEnv() {
   const result = schema.safeParse({

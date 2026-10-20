@@ -15,4 +15,24 @@ export async function closeDb() {
   clientPromise = undefined;
   globalThis._mongoClientPromise = undefined;
 }
-export const Collections = { opportunities: "opportunities", benefits: "benefits", tools: "tools", guides: "guides", reports: "reports", newsletter: "newsletter", rateLimits: "rate_limits", needsAttention: "needs_attention", reviewQueue: "review_queue", auditLog: "audit_log" } as const;
+export const Collections = {
+  opportunities: "opportunities",
+  benefits: "benefits",
+  tools: "tools",
+  guides: "guides",
+  reports: "reports",
+  newsletter: "newsletter",
+  rateLimits: "rate_limits",
+  needsAttention: "needs_attention",
+  reviewQueue: "review_queue",
+  auditLog: "audit_log",
+  events: "events",
+  users: "users",
+  savedItems: "saved_items",
+  remindersSent: "reminders_sent",
+  finderCache: "finder_cache",
+  finderShares: "finder_shares",
+  suggestions: "suggestions",
+  ingestRuns: "ingest_runs",
+  articles: "articles",
+} as const;

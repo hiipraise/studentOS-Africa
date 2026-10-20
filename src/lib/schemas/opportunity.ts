@@ -18,6 +18,8 @@ export const OpportunitySchema = z.object({
   }),
   description: z.string().min(20).max(2000),
   category: OpportunityCategoryEnum,
+  organisation: z.string().max(200).optional(),
+  tags: z.array(z.string().max(60)).max(30).default([]),
   countries: z
     .array(z.string().min(2).max(60))
     .min(1, "At least one country required"),

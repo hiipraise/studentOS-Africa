@@ -21,6 +21,10 @@ export interface Opportunity {
   slug: string;
   description: string;
   category: OpportunityCategory;
+  /** Issuing organisation, used for display, search and dedupe. */
+  organisation?: string;
+  /** Free-form topic tags used by search and the Finder. */
+  tags?: string[];
   /** ISO 3166-1 alpha-2 codes or "Global" */
   countries: string[];
   /** null means rolling / no fixed deadline */
@@ -48,6 +52,13 @@ export interface Opportunity {
   published: boolean;
   createdAt: Date;
   updatedAt: Date;
+  /** Field names explicitly edited by an admin/editor; automated ingestion must preserve them. */
+  editedByAdmin?: string[];
+  sourceUrl?: string;
+  sourceHash?: string;
+  firstSeenAt?: Date;
+  lastSeenAt?: Date;
+  linkCheckFailures?: number;
 }
 
 export type OpportunityStatus = "open" | "upcoming" | "closed" | "rolling" | "unknown";
@@ -77,9 +88,15 @@ export interface Benefit {
   slug: string;
   description: string;
   eligibility: string;
-  availability?: { countries: Record<string, "works" | "partial" | "blocked" | "unknown">; notes?: string };
+  organisation?: string;
+  availability?: { countries: Record<string, "works" | "partial" | "blocked" | "unknown">; notes?: string; updatedAt?: Date };
   verificationMethod?: string;
   paymentNotes?: string;
+  /** Practical guidance verified by the editorial team. */
+  guidance?: BenefitGuidance;
+  /** Moderated community tips. */
+  tips?: BenefitTip[];
+  tags?: string[];
   lastChecked?: Date;
   needsReview?: boolean;
   verifiedBy?: string;
@@ -94,6 +111,12 @@ export interface Benefit {
   published: boolean;
   createdAt: Date;
   updatedAt: Date;
+  editedByAdmin?: string[];
+  sourceUrl?: string;
+  sourceHash?: string;
+  firstSeenAt?: Date;
+  lastSeenAt?: Date;
+  linkCheckFailures?: number;
 }
 
 // ─── Tool ──────────────────────────────────────────────────────────────────
@@ -122,6 +145,11 @@ export interface Tool {
   published: boolean;
   createdAt: Date;
   updatedAt: Date;
+  editedByAdmin?: string[];
+  sourceUrl?: string;
+  sourceHash?: string;
+  firstSeenAt?: Date;
+  lastSeenAt?: Date;
 }
 
 // ─── Guide ─────────────────────────────────────────────────────────────────
@@ -144,24 +172,64 @@ export interface Guide {
   published: boolean;
   createdAt: Date;
   updatedAt: Date;
+  editedByAdmin?: string[];
+  sourceUrl?: string;
+  sourceHash?: string;
+  firstSeenAt?: Date;
+  lastSeenAt?: Date;
+}
+
+export interface BenefitGuidance {
+  documentsAccepted?: string[];
+  schoolEmailRequired?: "yes" | "no" | "varies" | "unknown";
+  paymentWorkarounds?: string[];
+  commonRejectionReasons?: string[];
+  updatedAt?: Date;
+}
+
+export interface BenefitTip {
+  body: string;
+  helpful: number;
+  submittedBy?: string;
+  createdAt: Date;
+  published: boolean;
 }
 
 // ─── Community Report ──────────────────────────────────────────────────────
 
+/** Legacy moderation field retained for pre-v2 rows. */
 export type ReportStatus = "approved" | "rejected" | "pending";
+export type ReportOutcome = "worked" | "partial" | "failed" | "unknown";
+export type ReportModeration = "pending" | "approved" | "rejected";
 
 export interface Report {
   _id?: ObjectId;
   /** References Benefit._id */
   benefitId: string;
-  /** Benefit title snapshot (so reports are readable without joining) */
+  /** Server-resolved Benefit title snapshot */
   benefitTitle: string;
   school: string;
   country: string;
-  status: ReportStatus;
+  /** ISO alpha-2 code derived from country when recognisable. */
+  countryCode?: string;
+  /** @deprecated Use moderation. Kept so pre-v2 records keep loading. */
+  status?: ReportStatus;
+  moderation?: ReportModeration;
+  outcome?: ReportOutcome;
+  verificationMethod?: "school-email" | "student-id" | "document" | "other" | "none" | "unknown";
+  timeToApproveDays?: number | null;
+  paymentIssue?: { occurred: boolean; notes?: string };
+  reportDate?: Date;
   comment: string;
+  /** Optional, lower-cased contact for the moderation decision. Never shown publicly. */
+  submitterEmail?: string;
+  /** Normalised comment hash used for duplicate detection. */
+  commentHash?: string;
   /** Moderation note added by admin */
   adminNote?: string;
+  /** Reason shared with the submitter when a report is rejected. */
+  moderationReason?: string;
+  moderatedAt?: Date;
   createdAt: Date;
 }
 
@@ -170,9 +238,52 @@ export interface Report {
 export interface NewsletterSubscriber {
   _id?: ObjectId;
   email: string;
+  status?: "pending" | "confirmed" | "unsubscribed";
+  confirmedAt?: Date;
+  unsubscribedAt?: Date;
+  consentAt?: Date;
+  consentPurpose?: string;
+  source?: string;
   /** Sendhiiv subscriber ID after successful sync */
   sendhiivId?: string;
   createdAt: Date;
+}
+
+export interface StudentUser {
+  _id?: ObjectId;
+  email: string;
+  name?: string;
+  image?: string;
+  role: "student" | "admin";
+  country?: string;
+  level?: "highschool" | "undergraduate" | "postgraduate" | "phd" | "professional";
+  fields?: string[];
+  consentAt?: Date;
+  /** Quiet opt-out from deadline reminder emails. */
+  remindersOptOut?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SavedItem {
+  _id?: ObjectId;
+  userEmail: string;
+  opportunitySlug: string;
+  opportunityTitle: string;
+  /** Application tracker stage. */
+  stage: "saved" | "preparing" | "submitted" | "result";
+  notes?: string;
+  deadline?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReminderSent {
+  _id?: string;
+  userEmail: string;
+  forDate: string;
+  items: string[];
+  sentAt: Date;
 }
 
 // ─── AI Finder ─────────────────────────────────────────────────────────────
@@ -185,16 +296,29 @@ export interface FinderInput {
   careerGoal: string;
 }
 
+export interface FinderPick {
+  slug: string;
+  title: string;
+  category: OpportunityCategory;
+  deadline: Date | null;
+  description: string;
+  funding?: Opportunity["funding"];
+  reason: string;
+  matchedCriteria: string[];
+  score: number;
+}
+
 export interface FinderResult {
-  opportunities: Pick<
-    Opportunity,
-    "title" | "slug" | "category" | "deadline" | "description"
-  >[];
-  benefits: Pick<Benefit, "title" | "slug" | "description">[];
-  tools: Pick<Tool, "title" | "slug" | "category" | "description">[];
-  guides: Pick<Guide, "title" | "slug" | "excerpt">[];
-  /** AI-generated reasoning for why these were picked */
+  picks: FinderPick[];
+  /** Explanation from the model, or a deterministic summary when AI is off. */
   explanation: string;
+  /** How many candidates survived the deterministic filter. */
+  considered: number;
+  /** Whether the explanation came from the model. */
+  ai: boolean;
+  note?: string;
+  shareUrl?: string;
+  cached?: boolean;
 }
 
 // ─── API Response wrapper ──────────────────────────────────────────────────
