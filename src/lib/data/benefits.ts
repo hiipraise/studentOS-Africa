@@ -1,5 +1,7 @@
 import { getDb, Collections } from "@/lib/db";
 import type { Benefit, Report } from "@/types";
+import { APPROVED_REPORT_FILTER } from "@/lib/reports";
+import { computeAvailability, computeReportStats } from "@/lib/domain/report-stats";
 
 export async function getBenefits({
   featured,
@@ -34,14 +36,18 @@ export async function getBenefitBySlug(slug: string) {
 
   if (!benefit) return null;
 
+  const ids = [benefit._id?.toString(), benefit.slug].filter((value): value is string => Boolean(value));
   const reports = await db
     .collection<Report>(Collections.reports)
-    .find({ benefitId: benefit._id?.toString(), status: "approved" })
-    .sort({ createdAt: -1 })
-    .limit(20)
+    .find({ ...APPROVED_REPORT_FILTER, benefitId: { $in: ids } })
+    .sort({ reportDate: -1, createdAt: -1 })
+    .limit(50)
     .toArray();
 
-  return { benefit, reports };
+  const stats = computeReportStats(reports);
+  const availability = computeAvailability(benefit, reports);
+
+  return { benefit, reports, stats, availability };
 }
 
 export async function getFeaturedBenefits(limit = 4) {

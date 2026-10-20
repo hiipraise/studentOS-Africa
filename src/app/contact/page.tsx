@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { Mail, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { Mail, MessageCircle, Lightbulb } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch with the StudentOS Africa team.",
+  description: "Get in touch with the StudentOS Africa team or suggest an opportunity.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {
@@ -16,6 +18,15 @@ export default function ContactPage() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full pt-4">
+          <Link
+            href="/suggest"
+            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-white p-6 hover:border-forest/30 hover:shadow-sm transition-all"
+          >
+            <Lightbulb className="h-5 w-5 text-forest" aria-hidden="true" />
+            <span className="text-sm font-medium text-ink">Suggest an opportunity</span>
+            <span className="text-xs text-muted">Feeds the review queue</span>
+          </Link>
+
           <a
             href="mailto:hello@studentos.africa"
             className="flex flex-col items-center gap-2 rounded-xl border border-border bg-white p-6 hover:border-forest/30 hover:shadow-sm transition-all"

@@ -71,6 +71,7 @@ export async function createOpportunity(data: Record<string, unknown>) {
     createdAt: now,
     updatedAt: now,
   };
+  doc.editedByAdmin = Object.keys(doc).filter((field) => !["createdAt", "updatedAt", "editedByAdmin"].includes(field));
 
   OpportunitySchema.parse(doc);
   await ensureUniqueSlug(db, Collections.opportunities, doc.slug);
@@ -113,7 +114,7 @@ export async function updateOpportunity(slug: string, data: Record<string, unkno
 
   await db
     .collection<Opportunity>(Collections.opportunities)
-    .updateOne({ slug }, { $set: update });
+    .updateOne({ slug }, { $set: update, $addToSet: { editedByAdmin: { $each: Object.keys(update) } } });
 
   await audit(db, actor(session), Collections.opportunities, update.slug!, before as unknown as Record<string, unknown>, update as unknown as Record<string, unknown>);
   revalidateContent("opportunities", update.slug);
@@ -167,6 +168,7 @@ export async function createBenefit(data: Record<string, unknown>) {
     createdAt: now,
     updatedAt: now,
   };
+  doc.editedByAdmin = Object.keys(doc).filter((field) => !["createdAt", "updatedAt", "editedByAdmin"].includes(field));
 
   BenefitSchema.parse(doc);
   await ensureUniqueSlug(db, Collections.benefits, doc.slug);
@@ -208,7 +210,7 @@ export async function updateBenefit(slug: string, data: Record<string, unknown>)
 
   await db
     .collection<Benefit>(Collections.benefits)
-    .updateOne({ slug }, { $set: update });
+    .updateOne({ slug }, { $set: update, $addToSet: { editedByAdmin: { $each: Object.keys(update) } } });
 
   await audit(db, actor(session), Collections.benefits, update.slug!, before as unknown as Record<string, unknown>, update as unknown as Record<string, unknown>);
   revalidateContent("benefits", update.slug);
@@ -257,6 +259,7 @@ export async function createTool(data: Record<string, unknown>) {
     createdAt: now,
     updatedAt: now,
   };
+  doc.editedByAdmin = Object.keys(doc).filter((field) => !["createdAt", "updatedAt", "editedByAdmin"].includes(field));
 
   ToolSchema.parse(doc); await ensureUniqueSlug(db, Collections.tools, doc.slug);
 
@@ -289,7 +292,7 @@ export async function updateTool(slug: string, data: Record<string, unknown>) {
 
   await db
     .collection<Tool>(Collections.tools)
-    .updateOne({ slug }, { $set: update });
+    .updateOne({ slug }, { $set: update, $addToSet: { editedByAdmin: { $each: Object.keys(update) } } });
 
   await audit(db, actor(session), Collections.tools, update.slug!, before as unknown as Record<string, unknown>, update as unknown as Record<string, unknown>); revalidateContent("tools", update.slug);
   redirect("/admin/tools");
@@ -329,6 +332,7 @@ export async function createGuide(data: Record<string, unknown>) {
     createdAt: now,
     updatedAt: now,
   };
+  doc.editedByAdmin = Object.keys(doc).filter((field) => !["createdAt", "updatedAt", "editedByAdmin"].includes(field));
 
   GuideSchema.parse(doc); await ensureUniqueSlug(db, Collections.guides, doc.slug);
 
@@ -360,7 +364,7 @@ export async function updateGuide(slug: string, data: Record<string, unknown>) {
 
   await db
     .collection<Guide>(Collections.guides)
-    .updateOne({ slug }, { $set: update });
+    .updateOne({ slug }, { $set: update, $addToSet: { editedByAdmin: { $each: Object.keys(update) } } });
 
   await audit(db, actor(session), Collections.guides, update.slug!, before as unknown as Record<string, unknown>, update as unknown as Record<string, unknown>); revalidateContent("guides", update.slug);
   redirect("/admin/guides");
@@ -383,25 +387,27 @@ export async function toggleGuidePublish(slug: string, current: boolean) {
 
 export async function moderateReport(
   reportId: string,
-  status: Report["status"],
-  adminNote?: string
+  moderation: Report["moderation"],
+  moderationReason?: string
 ) {
   const session = await requireEditor();
   const db = await getDb();
+  if (!moderation) throw new Error("A moderation decision is required.");
   const before = await db.collection<Report>(Collections.reports).findOne({ _id: new ObjectId(reportId) });
 
   const update: Partial<Report> = {
-    status,
-    ...(adminNote ? { adminNote } : {}),
+    moderation,
+    ...(moderationReason ? { moderationReason, adminNote: moderationReason } : {}),
   };
 
   await db
     .collection<Report>(Collections.reports)
-    .updateOne({ _id: new ObjectId(reportId) }, { $set: update });
+    .updateOne({ _id: new ObjectId(reportId) }, { $set: { ...update, moderatedAt: new Date() } });
 
   if (before) await audit(db, actor(session), Collections.reports, reportId, before as unknown as Record<string, unknown>, update as unknown as Record<string, unknown>);
-
   revalidatePath("/admin/reports");
+  revalidatePath("/reports");
+  if (before?.benefitTitle) revalidatePath("/benefits");
 }
 
 // End of admin mutation actions.
