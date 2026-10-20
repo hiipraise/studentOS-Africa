@@ -9,6 +9,7 @@ export const FinderInputSchema = z.object({
     .min(1, "At least one interest required")
     .max(10),
   careerGoal: z.string().min(5).max(300),
+  has: z.array(z.string().max(40)).max(10).optional(),
 });
 
 export type FinderInputData = z.infer<typeof FinderInputSchema>;
